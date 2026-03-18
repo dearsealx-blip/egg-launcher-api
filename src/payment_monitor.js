@@ -99,6 +99,25 @@ async function handleLaunch(ticker, senderAddress) {
             }).catch(() => {});
         }
 
+
+        // Announce to @EggonTon channel
+        const EGG_BOT = '8661089019:AAE3V1LUEtVZDVMCov58dSP9lj4UxdcxG70';
+        const channelMsg = '🥚 *New token launched!*\n\n' +
+            '$' + ticker + ' is live on Egg Launcher!\n' +
+            '🔥 Be the first to buy\n\n' +
+            '_Creator: @' + (pending.tg_username || 'anon') + '_';
+        await fetch('https://api.telegram.org/bot' + EGG_BOT + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: -1003856523369,
+                text: channelMsg,
+                parse_mode: 'Markdown',
+                reply_markup: { inline_keyboard: [[{ text: '🥚 Buy ' + ticker, url: 'https://t.me/MrEgggBot/launcher' }]] }
+            }),
+        }).catch(() => {});
+
+
         console.log(`[monitor] ✅ $${ticker} launched successfully`);
     } catch (e) {
         console.error(`[monitor] launch error for $${ticker}:`, e.message);
