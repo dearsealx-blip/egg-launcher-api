@@ -17,6 +17,10 @@ app.use('/api/tokens', tokenRouter);
 app.use('/api/trade', tradeRouter);
 app.use('/api/dashboard', dashboardRouter);
 
+// Shorthand routes expected by Mini App
+app.post('/api/pending-launch', (req, res, next) => { req.url = '/pending'; launchRouter(req, res, next); });
+app.post('/api/upload-image',   (req, res, next) => { req.url = '/upload-image'; launchRouter(req, res, next); });
+
 app.get('/', (_, res) => res.send(`
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>🥚 Egg Launcher API</title>
 <style>body{font-family:monospace;background:#0a0a0a;color:#f5c542;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
