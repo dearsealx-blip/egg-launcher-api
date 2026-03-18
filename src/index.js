@@ -6,6 +6,7 @@ import { tokenRouter } from './routes/tokens.js';
 import { tradeRouter } from './routes/trade.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { graduationWatcher } from './watcher.js';
+import { startPaymentMonitor } from './payment_monitor.js';
 
 const app = express();
 app.use(cors());
@@ -39,7 +40,8 @@ const PORT = process.env.PORT || 3000;
 
 async function start() {
     await db.init();
-    graduationWatcher.start();  // watches chain for graduation events
+    graduationWatcher.start();   // watches chain for graduation events
+    startPaymentMonitor();       // watches egg wallet for LAUNCH_TICKER payments
     app.listen(PORT, () => console.log(`egg-launcher backend on :${PORT}`));
 }
 
