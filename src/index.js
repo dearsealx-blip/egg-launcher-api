@@ -16,6 +16,16 @@ app.use('/api/tokens', tokenRouter);
 app.use('/api/trade', tradeRouter);
 app.use('/api/dashboard', dashboardRouter);
 
+app.get('/', (_, res) => res.send(`
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>🥚 Egg Launcher API</title>
+<style>body{font-family:monospace;background:#0a0a0a;color:#f5c542;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+.box{text-align:center;padding:2rem;border:1px solid #f5c542;border-radius:12px}h1{font-size:2rem;margin:0 0 .5rem}p{color:#aaa;margin:.25rem 0}a{color:#f5c542}</style></head>
+<body><div class="box"><h1>🥚 egg launcher</h1><p>API is live</p><br>
+<p><a href="/health">/health</a></p>
+<p><a href="/api/tokens">/api/tokens</a></p>
+<p><a href="/api/dashboard">/api/dashboard</a></p>
+</div></body></html>`));
+
 app.get('/health', (_, res) => res.json({ ok: true }));
 
 app.get('/debug', async (_, res) => {
