@@ -1,29 +1,29 @@
-// Watches TON chain for graduation events + syncs curve state
-import { TonClient } from '@ton/ton';
+import { TonClient, Address } from '@ton/ton';
 import { db } from './db.js';
-import { createDexPool } from './dex.js';
-import { notifyFollowers } from './notify.js';
 
 const client = new TonClient({
     endpoint: 'https://toncenter.com/api/v2/jsonRPC',
     apiKey:   process.env.TONCENTER_API_KEY,
 });
 
+const GRAD_THRESHOLD = 500_000_000_000n; // 500 TON in nanotons
+
 export const graduationWatcher = {
     interval: null,
 
     start() {
-        this.interval = setInterval(() => this.tick(), 15_000); // every 15s
-        console.log('[watcher] graduation watcher started');
+        this.interval = setInterval(() => this.tick(), 20_000);
+        setTimeout(() => this.tick(), 5000);
+        console.log('[watcher] started');
     },
 
     async tick() {
         try {
             const tokens = await db.listTokens({ limit: 100 });
             for (const token of tokens) {
-                if (!token.curve_address) continue;
+                if (!token.curve_address || token.graduated) continue;
                 await this.checkToken(token);
-                await new Promise(r => setTimeout(r, 300)); // rate limit
+                await new Promise(r => setTimeout(r, 500));
             }
         } catch (e) {
             console.error('[watcher] tick error:', e.message);
@@ -32,59 +32,50 @@ export const graduationWatcher = {
 
     async checkToken(token) {
         try {
-            // Read curve state from chain
             const result = await client.runMethod(
                 Address.parse(token.curve_address),
                 'curve_state'
             );
+            const s = result.stack;
+            const virtual_ton        = s.readBigNumber();
+            const virtual_tokens     = s.readBigNumber();
+            const real_ton_collected = s.readBigNumber();
+            const tokens_sold        = s.readBigNumber();
+            const graduated          = s.readBoolean();
+            const trade_count        = s.readBigNumber();
+            const price_num          = s.readBigNumber();
 
-            const state = {
-                virtual_ton:        result.stack.readNumber(),
-                virtual_tokens:     result.stack.readNumber(),
-                real_ton_collected: result.stack.readNumber(),
-                tokens_sold:        result.stack.readNumber(),
-                token_reserve:      result.stack.readNumber(),
-                graduated:          result.stack.readBoolean(),
-                trade_count:        result.stack.readNumber(),
-                price:              result.stack.readNumber(),
-                progress:           result.stack.readNumber(),
-            };
+            const real_ton = Number(real_ton_collected) / 1e9;
+            const progress = Math.min(100, Math.round(Number(real_ton_collected) * 100 / Number(GRAD_THRESHOLD)));
+            const price    = virtual_tokens > 0n ? Number(virtual_ton) / Number(virtual_tokens) : 0;
 
-            await db.updateTokenState(token.curve_address, state);
-
-            // Graduation detected
-            if (state.graduated && !token.graduated) {
-                console.log(`[watcher] 🎓 GRADUATION: $${token.ticker}`);
-                await this.handleGraduation(token);
-            }
-
-            // Notify followers on big buys (>5 TON)
-            // (checked separately via TX history)
-
-        } catch (e) {
-            // Contract may not be deployed yet — skip silently
-        }
-    },
-
-    async handleGraduation(token) {
-        try {
-            // Create DEX pool
-            const lpAddress = await createDexPool(token);
-
-            // Update DB
-            await db.graduateToken(token.curve_address, lpAddress);
-
-            // Notify all followers
-            const followers = await db.getFollowers(token.ticker);
-            await notifyFollowers(followers, {
-                type: 'graduation',
-                token,
-                lpAddress,
+            await db.updateTokenState(token.curve_address, {
+                real_ton,
+                virtual_ton:    Number(virtual_ton) / 1e9,
+                virtual_tokens: Number(virtual_tokens) / 1e9,
+                tokens_sold:    Number(tokens_sold) / 1e9,
+                trade_count:    Number(trade_count),
+                progress,
+                price,
+                graduated,
             });
 
-            console.log(`[watcher] ✅ $${token.ticker} graduated, LP: ${lpAddress}`);
+            if (graduated && !token.graduated) {
+                console.log(`[watcher] 🎓 GRADUATION: $${token.ticker}`);
+                await db.graduateToken(token.curve_address, null);
+                if (process.env.TELEGRAM_TOKEN && token.creator_tg_id) {
+                    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: token.creator_tg_id,
+                            text: `🎓 $${token.ticker} graduated! 500 TON reached. LP pool being created.`,
+                        }),
+                    }).catch(() => {});
+                }
+            }
         } catch (e) {
-            console.error(`[watcher] graduation handler error for $${token.ticker}:`, e.message);
+            // Contract not readable — skip
         }
-    }
+    },
 };
