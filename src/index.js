@@ -18,6 +18,13 @@ app.use('/api/dashboard', dashboardRouter);
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+app.get('/debug', async (_, res) => {
+    const { createClient } = await import('@supabase/supabase-js');
+    const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+    const r = await s.from('egg_tokens').select('id').limit(1);
+    res.json({ url: process.env.SUPABASE_URL?.slice(0, 30), error: r.error?.message, count: r.data?.length });
+});
+
 const PORT = process.env.PORT || 3000;
 
 async function start() {
