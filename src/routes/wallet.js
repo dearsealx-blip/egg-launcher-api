@@ -51,9 +51,9 @@ walletRouter.post('/buy', async (req, res) => {
 // POST /api/wallet/sell
 walletRouter.post('/sell', async (req, res) => {
     try {
-        const { tg_id, curve_address, token_amount } = req.body;
-        if (!tg_id || !curve_address || !token_amount) return res.status(400).json({ error: 'Missing params' });
-        const seqno = await sellOnBehalf(parseInt(tg_id), curve_address, token_amount);
+        const { tg_id, curve_address, jetton_address, token_amount } = req.body;
+        if (!tg_id || !curve_address || !jetton_address || !token_amount) return res.status(400).json({ error: 'Missing params' });
+        const seqno = await sellOnBehalf(parseInt(tg_id), curve_address, jetton_address, token_amount);
         res.json({ ok: true, seqno });
         setTimeout(() => syncToken(curve_address).catch(() => {}), 8000);
     } catch (e) { res.status(500).json({ error: e.message }); }
