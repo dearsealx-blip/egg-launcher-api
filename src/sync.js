@@ -17,8 +17,10 @@ export async function syncToken(curve_address) {
     const real_ton = Number(real_ton_collected) / 1e9;
     const progress = Math.min(100, real_ton * 100 / 500);
 
-    await supabase.from('egg_tokens').update({ real_ton, trade_count: Number(trade_count), progress })
+    const { error: updateErr } = await supabase.from('egg_tokens').update({ real_ton, trade_count: Number(trade_count), progress })
         .eq('curve_address', curve_address);
+    if (updateErr) console.error('[sync] update error:', updateErr.message);
+    else console.log(`[sync] ${curve_address.slice(0,10)} real_ton=${real_ton} trades=${trade_count}`);
 
     return { real_ton, trade_count: Number(trade_count), progress };
 }

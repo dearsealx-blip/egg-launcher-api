@@ -1,4 +1,4 @@
-import { WalletContractV4, TonClient, internal, toNano, fromNano, Address, beginCell } from '@ton/ton';
+﻿import { WalletContractV4, TonClient, internal, toNano, fromNano, Address, beginCell } from '@ton/ton';
 import { mnemonicNew, mnemonicToPrivateKey } from '@ton/crypto';
 import { createClient } from '@supabase/supabase-js';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
@@ -6,7 +6,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 const client   = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC', apiKey: process.env.TONCENTER_API_KEY });
 
-// AES-256-GCM encryption — key must be 32 bytes hex in env
+// AES-256-GCM encryption â€” key must be 32 bytes hex in env
 const ENC_KEY = Buffer.from(
     process.env.WALLET_ENCRYPTION_KEY || 'e99a18c428cb38d5f260853678922e0363b1b4a8c3dfc2ea2ede99a6001b6b37',
     'hex'
@@ -61,7 +61,7 @@ export async function getJettonBalance(wallet_address, jetton_master) {
     try {
         const { Address, Cell, beginCell } = await import('@ton/ton');
         // Get jetton wallet address for this user
-        const r = await client.runMethod(Address.parse(jetton_master), 'get_wallet_address', [
+        const r = await client.runMethod(Address.parse(jetton_master), 'wallet_address', [
             { type: 'slice', cell: beginCell().storeAddress(Address.parse(wallet_address)).endCell() }
         ]);
         const jwAddr = r.stack.readAddress();
@@ -114,10 +114,11 @@ export async function buyOnBehalf(tg_id, curve_address, ton_amount) {
         throw new Error(`Insufficient balance: ${fromNano(bal)} TON (need ${(parseFloat(ton_amount) + 0.07).toFixed(2)})`);
     }
 
-    // Plain TON transfer — contract's receive() handler accepts it as Buy
+    // Plain TON transfer â€” contract's receive() handler accepts it as Buy
     const seqno = await d.getSeqno();
     await d.sendTransfer({ seqno, secretKey: keys.secretKey, messages: [
         internal({ to: Address.parse(curve_address), value: toNano(ton_amount.toString()), bounce: true })
     ]});
     return seqno;
 }
+
