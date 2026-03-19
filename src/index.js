@@ -11,6 +11,7 @@ import { startPaymentMonitor } from './payment_monitor.js';
 import { starsRouter } from './routes/stars.js';
 import { startBot } from './bot.js';
 import { walletRouter } from './routes/wallet.js';
+import { adminRouter } from './routes/admin.js';
 
 const app = express();
 app.use(cors());
@@ -22,6 +23,7 @@ app.use('/api/trade', tradeRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/stars', starsRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/admin', adminRouter);
 
 // Shorthand routes expected by Mini App
 app.post('/api/pending-launch', (req, res, next) => { req.url = '/pending'; launchRouter(req, res, next); });

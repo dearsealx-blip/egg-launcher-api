@@ -61,7 +61,7 @@ export async function getJettonBalance(wallet_address, jetton_master) {
     try {
         const { Address, Cell, beginCell } = await import('@ton/ton');
         // Get jetton wallet address for this user
-        const r = await client.runMethod(Address.parse(jetton_master), 'get_wallet_address', [
+        const r = await client.runMethod(Address.parse(jetton_master), 'wallet_address', [
             { type: 'slice', cell: beginCell().storeAddress(Address.parse(wallet_address)).endCell() }
         ]);
         const jwAddr = r.stack.readAddress();
