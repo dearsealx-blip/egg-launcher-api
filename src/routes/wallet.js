@@ -1,5 +1,6 @@
 import express from 'express';
-import { getOrCreateWallet, getWalletBalance, buyOnBehalf, getMnemonic } from '../wallet_service.js';
+import { getOrCreateWallet, getWalletBalance, buyOnBehalf, sellOnBehalf, getMnemonic } from '../wallet_service.js';
+import { syncToken } from '../sync.js';
 import { db } from '../db.js';
 
 export const walletRouter = express.Router();
@@ -23,12 +24,25 @@ walletRouter.get('/:tg_id/seed', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// POST /api/wallet/buy — buy on behalf of user
+// POST /api/wallet/buy
 walletRouter.post('/buy', async (req, res) => {
     try {
         const { tg_id, curve_address, ton_amount } = req.body;
         if (!tg_id || !curve_address || !ton_amount) return res.status(400).json({ error: 'Missing params' });
         const seqno = await buyOnBehalf(parseInt(tg_id), curve_address, ton_amount);
         res.json({ ok: true, seqno });
+        // Sync stats after trade (fire-and-forget)
+        setTimeout(() => syncToken(curve_address).catch(() => {}), 8000);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/wallet/sell
+walletRouter.post('/sell', async (req, res) => {
+    try {
+        const { tg_id, curve_address, token_amount } = req.body;
+        if (!tg_id || !curve_address || !token_amount) return res.status(400).json({ error: 'Missing params' });
+        const seqno = await sellOnBehalf(parseInt(tg_id), curve_address, token_amount);
+        res.json({ ok: true, seqno });
+        setTimeout(() => syncToken(curve_address).catch(() => {}), 8000);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

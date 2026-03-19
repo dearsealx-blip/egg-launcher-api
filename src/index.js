@@ -6,6 +6,7 @@ import { tokenRouter } from './routes/tokens.js';
 import { tradeRouter } from './routes/trade.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { graduationWatcher } from './watcher.js';
+import { syncAllTokens } from './sync.js';
 import { startPaymentMonitor } from './payment_monitor.js';
 import { starsRouter } from './routes/stars.js';
 import { startBot } from './bot.js';
@@ -49,9 +50,12 @@ const PORT = process.env.PORT || 3000;
 
 async function start() {
     await db.init();
-    graduationWatcher.start();   // watches chain for graduation events
+    graduationWatcher.start();
     startPaymentMonitor();
-startBot();       // watches egg wallet for LAUNCH_TICKER payments
+    startBot();
+    // Sync token stats every 3 minutes
+    syncAllTokens().catch(() => {});
+    setInterval(() => syncAllTokens().catch(() => {}), 3 * 60 * 1000);
     app.listen(PORT, () => console.log(`egg-launcher backend on :${PORT}`));
 }
 

@@ -57,6 +57,33 @@ export async function getMnemonic(tg_id) {
     return decrypt(data.mnemonic);
 }
 
+export async function sellOnBehalf(tg_id, curve_address, token_amount) {
+    const { data: w } = await supabase.from('egg_wallets').select('address, mnemonic').eq('tg_id', tg_id).single();
+    if (!w) throw new Error('No wallet found');
+
+    const plainMnemonic = decrypt(w.mnemonic);
+    const keys   = await mnemonicToPrivateKey(plainMnemonic.split(' '));
+    const wallet = WalletContractV4.create({ publicKey: keys.publicKey, workchain: 0 });
+    const d      = client.open(wallet);
+
+    const bal = await d.getBalance();
+    if (bal < toNano('0.07')) throw new Error(`Need at least 0.07 TON for gas. Balance: ${fromNano(bal)} TON`);
+
+    // Sell message: op=0x2, token_amount (coins), min_ton_out=0
+    const tokenAmountBig = BigInt(Math.floor(token_amount)) * 1_000_000_000n;
+    const sellMsg = beginCell()
+        .storeUint(0x2, 32)
+        .storeCoins(tokenAmountBig)
+        .storeCoins(0n)
+        .endCell();
+
+    const seqno = await d.getSeqno();
+    await d.sendTransfer({ seqno, secretKey: keys.secretKey, messages: [
+        internal({ to: Address.parse(curve_address), value: toNano('0.05'), body: sellMsg, bounce: true })
+    ]});
+    return seqno;
+}
+
 export async function buyOnBehalf(tg_id, curve_address, ton_amount) {
     const { data: w } = await supabase.from('egg_wallets').select('address, mnemonic').eq('tg_id', tg_id).single();
     if (!w) throw new Error('No wallet found');
