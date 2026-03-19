@@ -57,6 +57,22 @@ export async function getMnemonic(tg_id) {
     return decrypt(data.mnemonic);
 }
 
+export async function getJettonBalance(wallet_address, jetton_master) {
+    try {
+        const { Address, Cell, beginCell } = await import('@ton/ton');
+        // Get jetton wallet address for this user
+        const r = await client.runMethod(Address.parse(jetton_master), 'get_wallet_address', [
+            { type: 'slice', cell: beginCell().storeAddress(Address.parse(wallet_address)).endCell() }
+        ]);
+        const jwAddr = r.stack.readAddress();
+        const state = await client.getContractState(jwAddr);
+        if (state.state !== 'active') return '0';
+        const r2 = await client.runMethod(jwAddr, 'get_wallet_data');
+        const balance = r2.stack.readBigNumber();
+        return (Number(balance) / 1e9).toFixed(0);
+    } catch { return '0'; }
+}
+
 export async function sellOnBehalf(tg_id, curve_address, token_amount) {
     const { data: w } = await supabase.from('egg_wallets').select('address, mnemonic').eq('tg_id', tg_id).single();
     if (!w) throw new Error('No wallet found');

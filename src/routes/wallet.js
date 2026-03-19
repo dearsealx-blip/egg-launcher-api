@@ -1,5 +1,5 @@
 import express from 'express';
-import { getOrCreateWallet, getWalletBalance, buyOnBehalf, sellOnBehalf, getMnemonic } from '../wallet_service.js';
+import { getOrCreateWallet, getWalletBalance, buyOnBehalf, sellOnBehalf, getMnemonic, getJettonBalance } from '../wallet_service.js';
 import { syncToken } from '../sync.js';
 import { db } from '../db.js';
 
@@ -14,6 +14,18 @@ walletRouter.get('/:tg_id', async (req, res) => {
         const balance = await getWalletBalance(wallet.address);
         res.json({ ok: true, address: wallet.address, balance });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/wallet/:tg_id/jetton?master=ADDRESS
+walletRouter.get('/:tg_id/jetton', async (req, res) => {
+    try {
+        const { data: w } = await (await import('@supabase/supabase-js'))
+            .createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+            .from('egg_wallets').select('address').eq('tg_id', req.params.tg_id).single();
+        if (!w) return res.json({ balance: '0' });
+        const balance = await getJettonBalance(w.address, req.query.master);
+        res.json({ balance });
+    } catch (e) { res.json({ balance: '0' }); }
 });
 
 // GET /api/wallet/:tg_id/seed — return decrypted mnemonic (user exports keys)
