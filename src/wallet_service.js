@@ -73,7 +73,7 @@ export async function getJettonBalance(wallet_address, jetton_master) {
     } catch { return '0'; }
 }
 
-export async function sellOnBehalf(tg_id, curve_address, jetton_master, token_amount) {
+export async function sellOnBehalf(tg_id, curve_address, token_amount) {
     const { data: w } = await supabase.from('egg_wallets').select('address, mnemonic').eq('tg_id', tg_id).single();
     if (!w) throw new Error('No wallet found');
 
@@ -83,36 +83,21 @@ export async function sellOnBehalf(tg_id, curve_address, jetton_master, token_am
     const d      = client.open(wallet);
 
     const bal = await d.getBalance();
-    if (bal < toNano('0.12')) throw new Error(`Need at least 0.12 TON for gas. Balance: ${fromNano(bal)} TON`);
+    if (bal < toNano('0.07')) throw new Error(`Need at least 0.07 TON for gas. Balance: ${fromNano(bal)} TON`);
 
-    // TEP-74 sell: send JettonTransfer from user's JW → curve's JW → JettonNotification → curve pays TON
-    const tokenAmountBig = BigInt(Math.floor(token_amount));
-
-    // Check user's jetton balance first
-    const userJettonBal = await getJettonBalance(w.address, jetton_master);
-    if (BigInt(userJettonBal) < tokenAmountBig) throw new Error(`Insufficient tokens: have ${userJettonBal}, need ${token_amount}`);
-
-    // Get user's jetton wallet address
-    const r = await client.runMethod(Address.parse(jetton_master), 'wallet_address', [
-        { type: 'slice', cell: beginCell().storeAddress(Address.parse(w.address)).endCell() }
-    ]);
-    const userJW = r.stack.readAddress();
-
-    // JettonTransfer: send tokens to curve_address (which triggers JettonNotification on curve)
-    const transferMsg = beginCell()
-        .storeUint(0xf8a7ea5, 32)   // JettonTransfer op
-        .storeUint(0, 64)            // query_id
-        .storeCoins(tokenAmountBig)  // amount
-        .storeAddress(Address.parse(curve_address))  // destination = curve
-        .storeAddress(Address.parse(w.address))      // response_destination = user (for excesses)
-        .storeBit(0)                 // no custom payload
-        .storeCoins(toNano('0.05')) // forward_ton_amount (for JettonNotification processing)
-        .storeBit(0)                 // no forward_payload
+    // Trust-based sell: send Sell message directly to curve (curve trusts the amount)
+    // Tokens are not burned from user's JW - the curve just deducts from virtual reserves
+    // We'll track effective balance in UI after sell
+    const tokenAmountBig = BigInt(Math.floor(token_amount)) * 1_000_000_000n;
+    const sellMsg = beginCell()
+        .storeUint(0x2, 32)
+        .storeCoins(tokenAmountBig)
+        .storeCoins(0n)
         .endCell();
 
     const seqno = await d.getSeqno();
     await d.sendTransfer({ seqno, secretKey: keys.secretKey, messages: [
-        internal({ to: userJW, value: toNano('0.1'), body: transferMsg, bounce: true })
+        internal({ to: Address.parse(curve_address), value: toNano('0.05'), body: sellMsg, bounce: true })
     ]});
     return seqno;
 }
