@@ -41,6 +41,11 @@ app.get('/', (_, res) => res.send(`
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
+app.get('/force-sync', async (_, res) => {
+    try { await syncAllTokens(); res.json({ ok: true }); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/debug', async (_, res) => {
     const { createClient } = await import('@supabase/supabase-js');
     const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
