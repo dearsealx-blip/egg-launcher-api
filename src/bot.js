@@ -4,11 +4,11 @@ const APP_URL = process.env.MINI_APP_URL || 'https://egg-launcher-miniapp.vercel
 const API_URL = process.env.API_URL || 'https://egg-api-production.up.railway.app';
 
 export function startBot() {
-    const BOT_TOKEN = process.env.TELEGRAM_TOKEN;
-    if (!BOT_TOKEN) { console.log('[bot] No TELEGRAM_TOKEN, skipping'); return; }
+    const BOT_TOKEN = process.env.TELEGRAM_TOKEN || '8661089019:AAE3V1LUEtVZDVMCov58dSP9lj4UxdcxG70';
+    const APP = process.env.MINI_APP_URL || 'https://egg-launcher-miniapp.vercel.app';
 
     const bot = new Telegraf(BOT_TOKEN);
-    const openBtn = Markup.inlineKeyboard([[Markup.button.webApp('🥚 Open Egg Launcher', APP_URL)]]);
+    const openBtn = Markup.inlineKeyboard([[Markup.button.webApp('🥚 Open Egg Launcher', APP)]]);
 
     bot.start(async (ctx) => {
         const user = ctx.from;
