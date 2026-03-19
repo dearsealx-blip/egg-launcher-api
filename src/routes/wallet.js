@@ -1,5 +1,5 @@
 import express from 'express';
-import { getOrCreateWallet, getWalletBalance, buyOnBehalf } from '../wallet_service.js';
+import { getOrCreateWallet, getWalletBalance, buyOnBehalf, getMnemonic } from '../wallet_service.js';
 import { db } from '../db.js';
 
 export const walletRouter = express.Router();
@@ -12,6 +12,14 @@ walletRouter.get('/:tg_id', async (req, res) => {
         const wallet = await getOrCreateWallet(parseInt(tg_id), tg_username);
         const balance = await getWalletBalance(wallet.address);
         res.json({ ok: true, address: wallet.address, balance });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/wallet/:tg_id/seed — return decrypted mnemonic (user exports keys)
+walletRouter.get('/:tg_id/seed', async (req, res) => {
+    try {
+        const mnemonic = await getMnemonic(parseInt(req.params.tg_id));
+        res.json({ ok: true, mnemonic });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
