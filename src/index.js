@@ -7,7 +7,8 @@ import { tradeRouter } from './routes/trade.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { graduationWatcher } from './watcher.js';
 import { startPaymentMonitor } from './payment_monitor.js';
-import { starsRouter } from './routes/stars.js';
+import { starsRouter }
+import { startBot } from './bot.js'; from './routes/stars.js';
 import { walletRouter } from './routes/wallet.js';
 
 const app = express();
@@ -49,7 +50,8 @@ const PORT = process.env.PORT || 3000;
 async function start() {
     await db.init();
     graduationWatcher.start();   // watches chain for graduation events
-    startPaymentMonitor();       // watches egg wallet for LAUNCH_TICKER payments
+    startPaymentMonitor();
+startBot();       // watches egg wallet for LAUNCH_TICKER payments
     app.listen(PORT, () => console.log(`egg-launcher backend on :${PORT}`));
 }
 
