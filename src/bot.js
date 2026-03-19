@@ -14,7 +14,7 @@ const GRAD  = '\u{1F393}';  // 🎓
 const WARN  = '\u26A0\uFE0F'; // ⚠️
 
 export function startBot() {
-    const BOT_TOKEN = process.env.TELEGRAM_TOKEN || '8661089019:AAE3V1LUEtVZDVMCov58dSP9lj4UxdcxG70';
+    const BOT_TOKEN = '8661089019:AAE3V1LUEtVZDVMCov58dSP9lj4UxdcxG70';
     const APP = process.env.MINI_APP_URL || 'https://egg-launcher-miniapp.vercel.app';
     const API_URL = process.env.API_URL || 'https://egg-api-production.up.railway.app';
 
