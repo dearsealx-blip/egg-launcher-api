@@ -28,19 +28,15 @@ const TOTAL_SUPPLY    = 1_000_000_000n * 1_000_000_000n;
 let CODES = null;
 function getCodes() {
     if (CODES) return CODES;
-    // Try backend bundle path first, then relative build path
-    const paths = [
-        join(__dir, './contracts_codes.js'),
-        join(__dir, '../../contracts/build/codes.js'),
-    ];
-    for (const p of paths) {
-        try {
-            const raw = readFileSync(p, 'utf8');
-            const match = raw.match(/CONTRACT_CODES\s*=\s*(\{[\s\S]*?\})\s*;/);
-            if (match) { CODES = JSON.parse(match[1]); return CODES; }
-        } catch {}
+    const p = join(__dir, './contracts_codes.js');
+    const raw = readFileSync(p, 'utf8');
+    CODES = {};
+    // Parse named exports: export const KEY = 'VALUE';
+    for (const m of raw.matchAll(/export const (\w+) = '([^']+)'/g)) {
+        CODES[m[1]] = m[2];
     }
-    throw new Error('Could not load CONTRACT_CODES');
+    if (!CODES['BONDING_CURVE_CODE']) throw new Error('Could not load contract codes');
+    return CODES;
 }
 
 // storeTokenMeta — exact Tact layout
@@ -97,8 +93,8 @@ export async function deployToken(params) {
     console.log(`[deployer] 🥚 Deploying $${ticker}...`);
 
     const codes     = getCodes();
-    const CURVE_CODE = Cell.fromBase64(codes['BondingCurve_BondingCurve']);
-    const JM_CODE    = Cell.fromBase64(codes['EggJetton_EggJettonMaster']);
+    const CURVE_CODE = Cell.fromBase64(codes['BONDING_CURVE_CODE']);
+    const JM_CODE    = Cell.fromBase64(codes['JETTON_MASTER_CODE']);
 
     const client   = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC', apiKey: process.env.TONCENTER_API_KEY });
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
